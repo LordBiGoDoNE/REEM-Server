@@ -2,6 +2,7 @@ plugins {
 	java
 	id("org.springframework.boot") version "3.5.5"
 	id("io.spring.dependency-management") version "1.1.7"
+	id("org.flywaydb.flyway") version "10.18.0"
 }
 
 group = "org.rvsoftworks"
@@ -26,7 +27,10 @@ configurations.configureEach {
 dependencies {
 	implementation(project(":REEM-Commons"))
 
-	implementation("org.springframework.boot:spring-boot-starter-amqp")
+	//Migration
+	implementation ("org.flywaydb:flyway-core")
+	implementation ("org.flywaydb:flyway-database-postgresql")
+
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
 	implementation("org.springframework.boot:spring-boot-starter-jdbc")
 //	implementation("org.springframework.boot:spring-data-r2dbc")

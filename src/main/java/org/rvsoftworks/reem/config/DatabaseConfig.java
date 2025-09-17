@@ -18,10 +18,10 @@ public class DatabaseConfig {
     @Value("${DATABASE_USUARIO:postgres}")
     private String user;
 
-    @Value("${DATABASE_SENHA:179324865}")
+    @Value("${DATABASE_SENHA:VrPost@Server}")
     private String password;
 
-    @Value("${DATABASE_PORTA:5432}")
+    @Value("${DATABASE_PORTA:18745}")
     private String port;
 
     @Value("${DATABASE_NOME:reem}")
