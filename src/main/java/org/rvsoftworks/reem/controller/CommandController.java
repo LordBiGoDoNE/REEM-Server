@@ -2,10 +2,14 @@ package org.rvsoftworks.reem.controller;
 
 import com.github.f4b6a3.uuid.UuidCreator;
 import org.rvsoftworks.commons.constants.CommandType;
+import org.rvsoftworks.commons.constants.Headers;
 import org.rvsoftworks.commons.model.dto.command.CommandDTO;
 import org.rvsoftworks.commons.model.dto.command.CommandResultDTO;
+import org.rvsoftworks.reem.service.CommandService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -17,36 +21,33 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequestMapping("/command")
 public class CommandController {
 
+    private final CommandService service;
+
     private ConcurrentHashMap<UUID, List<CommandDTO>> map = new ConcurrentHashMap<>();
 
-    @PostMapping("/set/{agentId}")
-    public String definirComando(@PathVariable String pAgentId, @RequestBody String pCommand) {
-        return "Comando definido para " + pAgentId;
-    }
-
-    @GetMapping
-    public ResponseEntity<List<CommandDTO>> getCommand(@RequestHeader("X-Agent-ID") String pAgentId,
-                                                       @RequestHeader("X-Agent-Secret") String pAgentSecret) {
-
-        UUID agentId = UuidCreator.fromString(pAgentId);
-
-        CommandDTO dto = new CommandDTO(UUID.randomUUID(), agentId, "ping www.google.com", CommandType.RUN_COMMAND, Duration.ofSeconds(50), OffsetDateTime.now());
-
-        ConcurrentHashMap<String, List<CommandDTO>> map = new ConcurrentHashMap<>();
-        map.put(pAgentId, List.of(dto));
-
-        ResponseEntity<List<CommandDTO>> response;
-
-        if (map.get(pAgentId).isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
-
-        return ResponseEntity.ok(map.remove(pAgentId));
+    @Autowired
+    public CommandController(CommandService service) {
+        this.service = service;
     }
 
     @PostMapping
-    public String receberResultado(@RequestBody CommandResultDTO agentReturn) {
-        System.out.println("Saída de " + agentReturn.command()+ ":\n" + agentReturn.result());
-        return "OK";
+    public String createCommand(@RequestBody CommandDTO pCommand) {
+        service.create(pCommand);
+        return "Comando definido para " + pCommand.idAgent();
+    }
+
+    @GetMapping
+    public ResponseEntity<List<CommandDTO>> getCommand(@RequestHeader(Headers.AGENT_ID) String pAgentId,
+                                                       @RequestHeader(Headers.AGENT_SECRET) String pAgentSecret) {
+        List<CommandDTO> commands = service.get(pAgentId);
+
+        return ResponseEntity.ok(commands);
+    }
+
+    @PostMapping("/result")
+    public Mono<ResponseEntity<String>> receberResultado(@RequestBody CommandResultDTO resultDTO) {
+        service.createResult(resultDTO);
+
+        return Mono.just(ResponseEntity.ok("Resultado inserido com sucesso!"));
     }
 }

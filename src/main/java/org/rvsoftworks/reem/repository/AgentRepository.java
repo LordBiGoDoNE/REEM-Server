@@ -1,14 +1,12 @@
 package org.rvsoftworks.reem.repository;
 
-import org.rvsoftworks.commons.model.dto.agent.AgentDTO;
+import org.rvsoftworks.reem.model.dto.agent.GetAgentDTO;
 import org.rvsoftworks.reem.model.entity.agent.AgentEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -21,24 +19,23 @@ public class AgentRepository {
         this.jdbcClient = jdbcClient;
     }
 
-    public List<AgentDTO> findAll() {
+    public List<GetAgentDTO> findAll() {
         String sql = """
                 SELECT
-                  	id,
                   	description,
-                  	external_id,
-                  	agent_secret
+                  	external_id
                 FROM
-                  	"server".agent;
+                  	"server".agent
+                WHERE
+                    disable = FALSE;
                 """;
 
         return jdbcClient.sql(sql)
                 .query((rs, rowNum) -> {
                     String description = rs.getString("description");
                     UUID externalId = UUID.fromString(rs.getString("external_id"));
-                    String secret = rs.getString("agent_secret");
 
-                    return new AgentDTO(description, externalId, secret);
+                    return new GetAgentDTO(description, externalId, null);
                 })
                 .list();
     }
@@ -59,15 +56,11 @@ public class AgentRepository {
                 );
                 """;
 
-        GeneratedKeyHolder holder = new GeneratedKeyHolder();
-
         jdbcClient.sql(sql)
                 .param("description", entity.getDescription())
                 .param("externalId", entity.getExternalId())
                 .param("secret", entity.getAgentSecret())
-                .update(holder, new String[]{"id"});
-
-        return Optional.ofNullable(holder.getKeyAs(Integer.class));
+                .update();
     }
 
     public void update(UUID pExternalId, String pDescription) {
@@ -86,12 +79,29 @@ public class AgentRepository {
                 .update();
     }
 
-    public Boolean checkExists(String pDescription) {
+    public Boolean checkExists(UUID pExternalId) {
+        String sql = """
+                SELECT EXISTS (
+                SELECT 1
+                FROM "server".agent
+                WHERE external_id = :externalId
+                AND disable = False
+                );
+                """;
+
+        return jdbcClient.sql(sql)
+                .param("externalId", pExternalId)
+                .query(Boolean.class)
+                .single();
+    }
+
+    public Boolean checkDescriptionExists(String pDescription) {
         String sql = """
                 SELECT EXISTS (
                 SELECT 1
                 FROM "server".agent
                 WHERE description = :description
+                AND disable = False
                 );
                 """;
 
@@ -99,5 +109,20 @@ public class AgentRepository {
                 .param("description", pDescription)
                 .query(Boolean.class)
                 .single();
+    }
+
+    public void disable(UUID externalId) {
+        String sql = """
+                UPDATE
+                	"server".agent
+                SET
+                	disable = TRUE
+                WHERE
+                	external_id = :externalId;
+                """;
+
+        jdbcClient.sql(sql)
+                .param("externalId", externalId)
+                .update();
     }
 }

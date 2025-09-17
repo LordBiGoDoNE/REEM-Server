@@ -1,24 +1,22 @@
 package org.rvsoftworks.reem.controller;
 
-import org.rvsoftworks.commons.model.dto.agent.AgentDTO;
+import org.rvsoftworks.commons.constants.Headers;
 import org.rvsoftworks.commons.model.dto.agent.CreateAgentDTO;
 import org.rvsoftworks.commons.model.heartbeat.HeartbeatDTO;
 import org.rvsoftworks.reem.model.dto.ChangeDescriptionRequest;
+import org.rvsoftworks.reem.model.dto.agent.GetAgentDTO;
 import org.rvsoftworks.reem.service.AgentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/agent")
 public class AgentController {
-
-    private ConcurrentHashMap<String, LocalDateTime> map = new ConcurrentHashMap<>();
 
     @Autowired
     private final AgentService service;
@@ -28,10 +26,8 @@ public class AgentController {
     }
 
     @GetMapping
-    public ResponseEntity<List<AgentDTO>> getAll() {
-        List<AgentDTO> dtos = service.getAll();
-
-        return ResponseEntity.ok(dtos);
+    public ResponseEntity<List<GetAgentDTO>> getAll() {
+        return ResponseEntity.ok(service.getAll());
     }
 
     @PostMapping(consumes = MediaType.TEXT_PLAIN_VALUE)
@@ -48,8 +44,17 @@ public class AgentController {
         return ResponseEntity.ok("Description changed!");
     }
 
-    @PostMapping(value = "/heatbeat", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ConcurrentHashMap<String, LocalDateTime>> heatbeat(@RequestBody HeartbeatDTO pRequest) {
-        return ResponseEntity.ok(map);
+    @PostMapping(value = "/heartbeat", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ResponseEntity<String>> heartbeat(@RequestBody HeartbeatDTO pRequest) {
+        service.setHeartBeat(pRequest);
+
+        return Mono.just(ResponseEntity.ok("Heartbeat registrado com sucesso!"));
+    }
+
+    @DeleteMapping
+    public Mono<ResponseEntity<String>> deleteAgent(@RequestHeader(Headers.AGENT_ID) String pAgentId) {
+        service.disableAgent(pAgentId);
+
+        return Mono.just(ResponseEntity.ok("Agent excluído com Sucesso!"));
     }
 }
